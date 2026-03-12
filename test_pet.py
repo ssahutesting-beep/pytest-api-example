@@ -41,6 +41,9 @@ TODO: Finish this test by...
 1) Testing and validating the appropriate 404 response for /pets/{pet_id}
 2) Parameterizing the test for any edge cases
 '''
-def test_get_by_id_404():
-    # TODO...
-    pass
+@pytest.mark.parametrize("pet_id", [999, -1, "invalid"])
+def test_get_by_id_404(pet_id):
+    test_endpoint = f"/pets/{pet_id}"
+
+    response = api_helpers.get_api_data(test_endpoint)
+    assert response.status_code == 404
