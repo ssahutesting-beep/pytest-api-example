@@ -69,7 +69,15 @@ class PetList(Resource):
     @pet_ns.marshal_with(pet_model, code=201)
     def post(self):
         """Create a new pet"""
-        pet = api.payload
+        pet = api.payload or {}
+        if 'name' not in pet or 'type' not in pet:
+            api.abort(400, 'Pet payload must include name and type')
+        if 'id' not in pet or not isinstance(pet['id'], int):
+            api.abort(400, 'Pet payload must include integer id')
+        if pet['type'] not in PET_TYPE:
+            api.abort(400, f"Invalid pet type '{pet['type']}'. Valid types are {', '.join(PET_TYPE)}")
+        if 'status' in pet and pet['status'] not in PET_STATUS:
+            api.abort(400, f"Invalid pet status '{pet['status']}'. Valid statuses are {', '.join(PET_STATUS)}")
         for i in pets:
             if i['id'] == pet['id']:
                 api.abort(409, f"Pet with ID {pet['id']} already exists")
@@ -111,8 +119,12 @@ class OrderResource(Resource):
     @store_ns.marshal_with(order_model, code=201)
     def post(self):
         """Place a new order"""
-        order_data = api.payload
+        order_data = api.payload or {}
         pet_id = order_data.get('pet_id')
+        if pet_id is None:
+            api.abort(400, 'Order payload must include pet_id')
+        if not isinstance(pet_id, int):
+            api.abort(400, 'pet_id must be an integer')
         pet = next((pet for pet in pets if pet['id'] == pet_id), None)
 
         if pet is None:
@@ -142,7 +154,7 @@ class OrderUpdateResource(Resource):
         if order_id not in orders:
             api.abort(404, "Order not found")
 
-        update_data = request.json
+        update_data = request.get_json(silent=True) or {}
         order = orders[order_id]
         pet_id = order['pet_id']
         pet = next((pet for pet in pets if pet['id'] == pet_id), None)
@@ -150,18 +162,22 @@ class OrderUpdateResource(Resource):
         if pet is None:
             api.abort(404, f"No pet found with ID {pet_id}")
 
+        status = update_data.get('status')
+        if status is None:
+            api.abort(400, 'Order update payload must include status')
+        if status not in PET_STATUS:
+            api.abort(400, f"Invalid status '{status}'. Valid statuses are {', '.join(PET_STATUS)}")
+
         # Update the order status
-        order['status'] = update_data['status']
+        order['status'] = status
 
         # Update the pet's status based on the order's new status
-        if update_data['status'] == 'pending':
+        if status == 'pending':
             pet['status'] = 'pending'
-        elif update_data['status'] == 'sold':
+        elif status == 'sold':
             pet['status'] = 'sold'
-        elif update_data['status'] == 'available':
+        elif status == 'available':
             pet['status'] = 'available'
-        else:
-            api.abort(400, f"Invalid status '{update_data['status']}'. Valid statuses are {', '.join(PET_STATUS)}")
 
 
         return {"message": "Order and pet status updated successfully"}
