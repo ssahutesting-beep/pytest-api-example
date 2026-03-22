@@ -49,6 +49,12 @@ pets = [
 
 orders = {}
 
+
+@app.errorhandler(404)
+def handle_not_found(error):
+    message = getattr(error, 'description', 'Not Found')
+    return {'message': message}, 404
+
 '''
 Pet Namespace
 '''

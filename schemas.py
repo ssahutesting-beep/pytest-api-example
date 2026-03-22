@@ -35,3 +35,13 @@ order = {
         },
     }
 }
+
+order_patch_response = {
+    "type": "object",
+    "required": ["message"],
+    "properties": {
+        "message": {
+            "type": "string"
+        }
+    }
+}
